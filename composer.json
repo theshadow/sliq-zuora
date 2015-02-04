@@ -1,0 +1,34 @@
+{
+    "name": "theshadow/sliq-zuora",
+    "description": "SliQ Zuora statement parser",
+    "type": "library",
+    "keywords": [
+        "zuora", "sliq"
+    ],
+    "homepage": "https://github.com/theshadow/sliq-zuora/",
+    "license": "CC0-Universal",
+    "authors": [
+        {
+            "name": "Xander Guzman",
+            "email": "xander.guzman@xanderguzman.com",
+            "role": "lead"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/theshadow/sliq-zuora/issues"
+    },
+    "require": {
+        "php": ">=5.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "4.3.*",
+        "mockery/mockery": "~0.9",
+        "hamcrest/hamcrest-php": "~1.2",
+        "theshadow/sliq": "dev-master"
+    },
+    "autoload": {
+        "psr-4": {
+            "SliQ\\Zuora\\": "src/"
+        }
+    }
+}

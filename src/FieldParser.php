@@ -29,6 +29,8 @@ class FieldParser implements FieldParserInterface
         Field::OP_LESS_THAN_EQUAL_TO => '<=',
         Field::OP_LIKE => null,
         Field::OP_NOT_LIKE => null,
+        Field::OP_BETWEEN => null,
+        Field::OP_NOT_BETWEEN => null,
     );
 
     /**
@@ -56,11 +58,23 @@ class FieldParser implements FieldParserInterface
      */
     public function parseBetween(Field $field)
     {
-        if (!is_array($field->getValues())) {
-            throw new \InvalidArgumentException("Field '" . $field->getName() . "' value must be of type array when using BETWEEN", 1);
+        $values = $field->getValues();
+
+        if (!is_array($values)) {
+            throw new \LogicException(
+                "Field '" . $field->getName() . "' value must be of type array when using BETWEEN",
+                1
+            );
         }
 
-        list($x, $y) = $this->parseValues($field->getValues());
+        if (count($values) !== 2) {
+            throw new \LogicException(
+                "Field '" . $field->getName() . "' value must be of type array with a length of 2 when using BETWEEN",
+                2
+            );
+        }
+
+        list($x, $y) = $this->parseValues($values);
 
         return sprintf(
             "%s %s %s AND %s %s %s",
@@ -80,11 +94,16 @@ class FieldParser implements FieldParserInterface
      */
     public function parseDefault(Field $field)
     {
-        if (is_array($field->getValues())) {
-            throw new \InvalidArgumentException("Value must be a basic non-array type received: " . var_export($field->getValues(), TRUE), 1);
+        $values = $field->getValues();
+
+        if (is_array($values)) {
+            throw new \LogicException(
+                "Value must be a basic non-array type received: " . var_export($values, true),
+                1
+            );
         }
 
-        $value = $this->parseValues($field->getValues());
+        $value = $this->parseValues($values);
 
         return sprintf("%s %s %s", $field->getName(), static::$OPERANDS[$field->getOperand()], $value);
     }
@@ -95,15 +114,22 @@ class FieldParser implements FieldParserInterface
      */
     public function parseIn(Field $field)
     {
-
         $values = $this->parseValues($field->getValues());
 
-        $in = array_reduce($values, function ($carry, $value) use ($field) {
+        $operator = static::$OPERANDS[Field::OP_EQUAL_TO];
+        $joiner = ' OR ';
+        if ($field->getOperand() === Field::OP_NOT_IN) {
+            $joiner = ' AND ';
+            $operator = static::$OPERANDS[Field::OP_NOT_EQUAL_TO];
+        }
+
+        $in = array_reduce($values, function ($carry, $value) use ($field, $operator) {
             /** @var Field $field */
-            $carry[] = "{$field->getName()} " . static::$OPERANDS[Field::OP_EQUAL_TO] . " {$value}";
+            $carry[] = "{$field->getName()} " . $operator . " {$value}";
+            return $carry;
         }, array());
 
-        return implode(' OR ', $in);
+        return implode($joiner, $in);
     }
 
     /**
@@ -116,8 +142,9 @@ class FieldParser implements FieldParserInterface
             return $this->parseType($values);
         }
 
-        $values = array_map(function ($value) use ($this) {
-            $value = urlencode($this->parseType($value));
+        $self = $this;
+        $values = array_map(function ($value) use ($self) {
+            $value = urlencode($self->parseType($value));
             return $value;
         }, $values);
 
@@ -132,6 +159,10 @@ class FieldParser implements FieldParserInterface
     {
         if (is_string($value)) {
             return "'{$value}'";
+        }
+
+        if (is_bool($value)) {
+            return $value ? 1 : 0;
         }
 
         return $value;
